@@ -3,6 +3,13 @@
   "version": "0.2.1",
   "private": true,
   "type": "module",
+  "files": [
+    "dist/main",
+    "dist/renderer",
+    "schema.json",
+    "icon.png",
+    "README.md"
+  ],
   "main": "./dist/main/index.cjs",
   "module": "./dist/renderer/index.mjs",
   "scripts": {
