@@ -1,0 +1,41 @@
+{
+  "type": "object",
+  "properties": {
+    "enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "自动放映总开关。关闭后仍可接收信号，但不会自动开始放映。"
+    },
+    "advanceMinutes": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 60,
+      "default": 5,
+      "description": "考试开始前提前进入放映的分钟数。"
+    },
+    "exitDelaySeconds": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 300,
+      "default": 30,
+      "description": "考试结束后延迟退出放映的秒数。"
+    },
+    "publishEndpoint": {
+      "type": "boolean",
+      "default": true,
+      "description": "把 EA 当前 HTTP API 端口写到发现文件，ClassIsland 端可自动跟随，不必两边手工对齐端口。"
+    },
+    "fixedPortEnabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "（可选，默认关闭）把端口写回 EA 配置，仅在下次启动生效。EA 自己会顺延端口，通常不需要开，交给「端口自动上报」即可。"
+    },
+    "fixedPort": {
+      "type": "integer",
+      "minimum": 1024,
+      "maximum": 65535,
+      "default": 31235,
+      "description": "固定的 HTTP API 端口，需与 ClassIsland 端「端口」一致。"
+    }
+  }
+}

@@ -1,0 +1,9 @@
+allowBuilds:
+  esbuild: true
+
+# 已发布的 @dsz-examaware/plugin-sdk@1.5.x 在 package.json 里保留了未发布的 workspace:* 依赖
+# （@dsz-examaware/core、@dsz-examaware/rpc），导致外部安装失败。这两个包对 SDK 只有类型引用、
+# 没有运行时引用，因此这里用已发布版本覆盖以满足解析。
+overrides:
+  '@dsz-examaware/core': 1.1.1
+  '@dsz-examaware/rpc': 0.3.0

@@ -1,0 +1,63 @@
+{
+  "name": "examaware-auto-player",
+  "version": "0.2.1",
+  "private": true,
+  "type": "module",
+  "main": "./dist/main/index.cjs",
+  "module": "./dist/renderer/index.mjs",
+  "scripts": {
+    "dev": "run-p dev:renderer dev:main",
+    "dev:renderer": "vite build --watch --mode development --config vite.config.ts",
+    "dev:main": "vite build --watch --mode development --config vite.main.config.ts",
+    "build": "pnpm run build:renderer && pnpm run build:main",
+    "build:renderer": "vite build --config vite.config.ts",
+    "build:main": "vite build --config vite.main.config.ts",
+    "pack": "pnpm run build && pack-examaware-plugin",
+    "lint": "vue-tsc --noEmit"
+  },
+  "examaware": {
+    "apiVersion": 2,
+    "displayName": "自动放映",
+    "description": "接收 ClassIsland 考试信号，按考试时间自动全屏放映 .ea2 档案，并在考试结束后自动退出。",
+    "targets": {
+      "main": "./dist/main/index.cjs",
+      "renderer": "./dist/renderer/index.mjs"
+    },
+    "permissions": [
+      "player.start",
+      "player.control",
+      "player.observe",
+      "files.read",
+      "time.read",
+      "http.routes",
+      "app.settings.read",
+      "app.settings.write",
+      "network.http",
+      "network.local",
+      "ui.contribute"
+    ],
+    "activation": {
+      "rendererWindows": [
+        "settings"
+      ]
+    },
+    "settings": {
+      "namespace": "auto-player",
+      "schema": "./schema.json"
+    }
+  },
+  "dependencies": {
+    "@dsz-examaware/plugin-sdk": "^1.5.2",
+    "vue": "^3.5.26"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.27",
+    "@vitejs/plugin-vue": "^5.2.4",
+    "npm-run-all2": "^7.0.2",
+    "typescript": "~5.7.3",
+    "vite": "^6.4.1",
+    "vue-tsc": "^2.2.12"
+  },
+  "author": "α-氯氰菊酯",
+  "license": "GPL-3.0-only"
+}
