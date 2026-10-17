@@ -11,14 +11,10 @@ overrides:
 importers:
 
   .:
-    dependencies:
+    devDependencies:
       '@dsz-examaware/plugin-sdk':
         specifier: ^1.5.2
         version: 1.5.2(vue@3.5.40(typescript@5.7.3))
-      vue:
-        specifier: ^3.5.26
-        version: 3.5.40(typescript@5.7.3)
-    devDependencies:
       '@types/node':
         specifier: ^20.19.27
         version: 20.19.43
@@ -34,6 +30,9 @@ importers:
       vite:
         specifier: ^6.4.1
         version: 6.4.3(@types/node@20.19.43)
+      vue:
+        specifier: ^3.5.26
+        version: 3.5.40(typescript@5.7.3)
       vue-tsc:
         specifier: ^2.2.12
         version: 2.2.12(typescript@5.7.3)

@@ -1,7 +1,6 @@
 {
   "name": "examaware-auto-player",
   "version": "0.2.1",
-  "private": true,
   "type": "module",
   "files": [
     "dist/main",
@@ -12,6 +11,23 @@
   ],
   "main": "./dist/main/index.cjs",
   "module": "./dist/renderer/index.mjs",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/1duye/examaware-auto-player.git"
+  },
+  "homepage": "https://github.com/1duye/examaware-auto-player#readme",
+  "bugs": {
+    "url": "https://github.com/1duye/examaware-auto-player/issues"
+  },
+  "keywords": [
+    "examaware",
+    "examaware-plugin",
+    "exam",
+    "player"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "dev": "run-p dev:renderer dev:main",
     "dev:renderer": "vite build --watch --mode development --config vite.config.ts",
@@ -53,16 +69,14 @@
       "schema": "./schema.json"
     }
   },
-  "dependencies": {
-    "@dsz-examaware/plugin-sdk": "^1.5.2",
-    "vue": "^3.5.26"
-  },
   "devDependencies": {
+    "@dsz-examaware/plugin-sdk": "^1.5.2",
     "@types/node": "^20.19.27",
     "@vitejs/plugin-vue": "^5.2.4",
     "npm-run-all2": "^7.0.2",
     "typescript": "~5.7.3",
     "vite": "^6.4.1",
+    "vue": "^3.5.26",
     "vue-tsc": "^2.2.12"
   },
   "author": "α-氯氰菊酯",
