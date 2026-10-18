@@ -49,7 +49,7 @@ ClassIsland 那边把考试排好，ExamAware 这边到点自己开播，考完�
 
 设置页还会显示连接状态、倒计时、当前场次、最近一次信号，并提供「连通性自检」和「立即停止放映」。
 
-## 关于端口（这里踩过坑）
+## 关于端口
 
 ExamAware 的 HTTP API 端口并不总是固定的：它在启动时会重启自己的 HTTP 服务，旧监听器还没释放就重新绑定，端口被占用就顺延到下一个，并把顺延结果写回配置。于是一路重启、一路往后挪。
 
@@ -67,7 +67,7 @@ push fail: 由于目标计算机积极拒绝，无法连接。 (127.0.0.1:31325)
 
 所以两边的端口**不需要手工对齐**。设置页里那行「EA 当前端口」只是给你看宿主现在报的是哪个端口。
 
-> 早期版本试过用宿主的 `http.configure` 把端口硬钉住，结果和宿主自己的重启互相打架，反而让 EA 设置页报「端口被占用」。已经放弃了，别开倒车。
+> 早期版本试过用宿主的 `http.configure` 把端口硬钉住，结果和宿主自己的重启互相打架，反而让 EA 设置页报「端口被占用」。
 
 ## 已知问题
 
@@ -90,15 +90,7 @@ push fail: 由于目标计算机积极拒绝，无法连接。 (127.0.0.1:31325)
 设置页点「立即停止放映」。
 
 **误把普通课标成考试了？**
-去 ClassIsland 的科目「更多选项」里关掉「考试科目」。
-
-## 开发者备注
-
-- 插件 ID `examaware-auto-player`，ExamAware 插件 API v2。**包名不要加作用域前缀**，原因见上。
-- 构建 `pnpm install && pnpm run build`；打包 `pnpm run pack`（产物在 `dist/`）。
-- HTTP 路由：`GET /ping`、`POST /signal`（body `{ "ea2Path": "...", "futureOnly": false }`）、`POST /stop`。
-- 图标和版式说明在 `design/` 和 `docs/`。
-- 日志：`%AppData%\@dsz-examaware\desktop\logs\examaware-YYYY-MM-DD.log`。
+去 ClassIsland 的科目「更多选项」里关掉「考试科目」
 
 ## 许可
 
