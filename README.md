@@ -62,7 +62,7 @@ push fail: 由于目标计算机积极拒绝，无法连接。 (127.0.0.1:31325)
 
 现在的做法是**上报 + 跟随**，不跟宿主抢端口：
 
-- 本插件每 5 秒把当前地址写到 `%APPDATA%\@dsz-examaware\desktop\auto-player-endpoint.json`；
+- 本插件每 15 秒看一眼当前端口：变了就立刻重写 `%APPDATA%\@dsz-examaware\desktop\auto-player-endpoint.json`，没变就一分钟写一次（ClassIsland 侧只要求 10 分钟内有更新，没必要拎着 SSD 磨）；
 - ClassIsland 端推送前读这个文件，用里面的端口，端口怎么飘都能跟上。
 
 所以两边的端口**不需要手工对齐**。设置页里那行「EA 当前端口」只是给你看宿主现在报的是哪个端口。
@@ -77,6 +77,22 @@ push fail: 由于目标计算机积极拒绝，无法连接。 (127.0.0.1:31325)
 - **宿主可能把端口顺延到别的数字**，EA 设置页显示的数字和插件设置页显示的「EA 当前端口」可能不一致；以插件上报的为准。
 - **考完的场次不会补播**。ClassIsland 在考试开始后才启动的话，进行中的场次能不能恢复取决于 ClassIsland 端推的档案。
 - **依赖档案内容合法**。档案坏了、`examInfos` 是空的、时间格式不对，这次信号会被拒（设置页「最近一次错误」会写原因）。
+
+## 本机 HTTP API 的安全边界
+
+`/signal` 和 `/stop` 没有鉴权（ClassIsland 端直接 POST 上来），这在浏览器里是个洞：任何网页都能朝 `127.0.0.1:<端口>` 发一个「简单请求」，浏览器不会先握手，服务端却会照做——等于任意网站都能把教室拉进 kiosk 全屏。
+
+0.2.2 起加了三道闸：
+
+- **挡浏览器**：带 `Origin`、`Sec-Fetch-Site: cross-site` 或非 JSON `Content-Type` 的请求一律 403。原生客户端（ClassIsland 的 `HttpClient`、自家设置页走宿主网络层）不带这些头，不受影响；设置页调 `/stop` 时会显式带 `x-auto-player-client: ui`。
+- **只认 .ea2**：`/signal` 的 `ea2Path` 必须是绝对路径且以 `.ea2` 结尾，不再随信号去读本机任意文件。
+- **`GET /ping` 保持只读**：谁都能看状态，但那上面没有可执行面。
+
+> 还差一层跨进程共享 token。这个要 ClassIsland 端一起升级才有意义，先靠上面三道把浏览器挡掉。
+
+## 代码水印
+
+源码里埋了机器可验证的来源标记：文件头明写、水印行末尾的零宽暗记、以及 `/ping` 的 `watermark` 运行时指纹。细节和校验方法见 [docs/watermark.md](docs/watermark.md)；设置页「记录与诊断 → 构建水印」显示的就是运行时那一层。
 
 ## 常见问题
 
@@ -96,7 +112,7 @@ push fail: 由于目标计算机积极拒绝，无法连接。 (127.0.0.1:31325)
 
 - 插件 ID `examaware-auto-player`，ExamAware 插件 API v2。**包名不要加作用域前缀**，原因见上。
 - 构建 `pnpm install && pnpm run build`；打包 `pnpm run pack`（产物在 `dist/`）。
-- HTTP 路由：`GET /ping`、`POST /signal`（body `{ "ea2Path": "...", "futureOnly": false }`）、`POST /stop`。
+- HTTP 路由：`GET /ping`（含 `watermark`）、`POST /signal`（body `{ "ea2Path": "绝对路径.ea2", "futureOnly": false }`）、`POST /stop`。两个 POST 会拒绝浏览器来源的请求，自家设置页需带 `x-auto-player-client: ui`。
 - 图标和版式说明在 `design/` 和 `docs/`。
 - 日志：`%AppData%\@dsz-examaware\desktop\logs\examaware-YYYY-MM-DD.log`。
 

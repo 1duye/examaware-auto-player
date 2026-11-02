@@ -1,9 +1,13 @@
-import { writeFile } from "node:fs/promises";
-import { join } from "node:path";
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (c) 2026 α-氯氰菊酯 <https://github.com/1duye>
+// Watermark: 1duye/examaware-auto-player#WM-2026​​‌‌​​​‌​‌‌​​‌​​​‌‌‌​‌​‌​‌‌‌‌​​‌​‌‌​​‌​‌​‌‌‌‌‌​​​‌‌​​‌​‌​‌‌‌‌​​​​‌‌​​​​‌​‌‌​‌‌​‌​‌‌​​​​‌​‌‌‌​‌‌‌​‌‌​​​​‌​‌‌‌​​‌​​‌‌​​‌​‌​​‌​‌‌​‌​‌‌​​​​‌​‌‌‌​‌​‌​‌‌‌​‌​​​‌‌​‌‌‌‌​​‌​‌‌​‌​‌‌‌​​​​​‌‌​‌‌​​​‌‌​​​​‌​‌‌‌‌​​‌​‌‌​​‌​‌​‌‌‌​​‌​​‌‌‌‌‌​​​​‌‌​​‌​​​‌‌​​​​​​‌‌​​‌​​​‌‌​‌‌​
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname, isAbsolute, join } from "node:path";
 import { defineMainPlugin } from "@dsz-examaware/plugin-sdk";
 import type { Disposable, MainPluginContext, PlayerSession } from "@dsz-examaware/plugin-sdk";
+import { WATERMARK } from "../shared/watermark";
 
-const BUILD = "20261017_v2_14";
+const BUILD = "20261102_v2_15";
 
 /**
  * 服务地址命名空间由宿主按插件名拼接。
@@ -12,25 +16,50 @@ const BUILD = "20261017_v2_14";
  */
 const ROUTE_PREFIX = "/api/v1/examaware-auto-player";
 
+/**
+ * 本机 HTTP API 没有鉴权，而浏览器发起的跨源请求是「简单请求」时不会先握手：
+ * 随便一个网页朝 127.0.0.1:<port> POST 一次，服务端就会真的执行——等于任意网站
+ * 都能把教室拉进 kiosk 全屏。浏览器一定带 Origin / Sec-Fetch-Site，原生客户端
+ * （ClassIsland 的 HttpClient、自家设置页走宿主网络层并带 x-auto-player-client）
+ * 不带，所以按这两个头拒绝即可，不用改协议、不破坏已有对接。
+ */
+type RequestHeaders = Readonly<Record<string, string | string[]>>;
+
+function readHeader(headers: RequestHeaders, name: string): string {
+  const value = headers[name] ?? headers[name.toLowerCase()] ?? headers[name.toUpperCase()];
+  return Array.isArray(value) ? value[0] ?? "" : value ?? "";
+}
+
+function isBrowserRequest(headers: RequestHeaders): boolean {
+  if (readHeader(headers, "x-auto-player-client").trim().toLowerCase() === "ui") return false;
+  if (readHeader(headers, "origin")) return true;
+  const site = readHeader(headers, "sec-fetch-site").trim().toLowerCase();
+  if (site === "cross-site" || site === "same-site") return true;
+  const contentType = readHeader(headers, "content-type").trim().toLowerCase();
+  return Boolean(contentType) && !contentType.startsWith("application/json");
+}
+
+/** 只接受绝对路径的 .ea2 文件，避免把任意路径塞进播放器。 */
+function normalizeEa2Path(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const value = raw.trim();
+  if (!value || !/\.ea2$/i.test(value) || !isAbsolute(value)) return null;
+  return value;
+}
+
 export interface AutoPlayerSettings {
   enabled: boolean;
   advanceMinutes: number;
   exitDelaySeconds: number;
   /** 是否把 EA 当前的 HTTP API 地址写到发现文件，供 ClassIsland 端自动对齐端口。 */
   publishEndpoint: boolean;
-  /** 可选：把端口写回宿主配置（下次启动生效；宿主可能自己再改，默认关闭）。 */
-  fixedPortEnabled: boolean;
-  /** 可选：写回宿主配置的端口。 */
-  fixedPort: number;
 }
 
 const DEFAULT_SETTINGS: AutoPlayerSettings = {
   enabled: true,
   advanceMinutes: 5,
   exitDelaySeconds: 30,
-  publishEndpoint: true,
-  fixedPortEnabled: false,
-  fixedPort: 31235
+  publishEndpoint: true
 };
 
 /**
@@ -53,9 +82,7 @@ function normalizeSettings(value: Partial<AutoPlayerSettings> = {}): AutoPlayerS
     enabled: value.enabled !== false,
     advanceMinutes: clampInt(value.advanceMinutes, 0, 60, DEFAULT_SETTINGS.advanceMinutes),
     exitDelaySeconds: clampInt(value.exitDelaySeconds, 0, 300, DEFAULT_SETTINGS.exitDelaySeconds),
-    publishEndpoint: value.publishEndpoint !== false,
-    fixedPortEnabled: value.fixedPortEnabled === true,
-    fixedPort: clampInt(value.fixedPort, 1024, 65535, DEFAULT_SETTINGS.fixedPort)
+    publishEndpoint: value.publishEndpoint !== false
   };
 }
 
@@ -99,6 +126,7 @@ class AutoPlayerService {
   private routeDisposables: Disposable[] = [];
   private publishTimer: ReturnType<typeof setInterval> | undefined;
   private publishedPort = 0;
+  private lastEndpointWriteAt = 0;
 
   constructor(private readonly ctx: MainPluginContext<AutoPlayerSettings>) {
     this.settings = normalizeSettings(ctx.initialSettings);
@@ -111,8 +139,7 @@ class AutoPlayerService {
       ctx.api.settings.onChanged((settings) => {
         this.settings = normalizeSettings(settings);
         ctx.logger.info("settings changed", this.settings);
-        void this.publishEndpoint();
-        void this.syncFixedPortConfig();
+        void this.publishEndpoint(true);
       })
     );
 
@@ -131,12 +158,12 @@ class AutoPlayerService {
     );
 
     this.registerRoutes();
-    // 上报当前地址供 ClassIsland 自动发现；端口若被宿主顺延，下一轮上报会自动跟上
-    void this.publishEndpoint();
-    void this.syncFixedPortConfig();
+    // 上报当前地址供 ClassIsland 自动发现；端口若被宿主顺延，下一轮上报会自动跟上。
+    // 15 秒轮询、内容没变时最多 1 分钟写一次盘（以前是 5 秒无脑重写，纯属磨 SSD）。
+    void this.publishEndpoint(true);
     this.publishTimer = setInterval(() => {
       void this.publishEndpoint();
-    }, 5000);
+    }, 15_000);
     ctx.scope.defer(() => this.dispose());
 
     ctx.logger.info(`auto-player API v2 ready build=${BUILD}`, {
@@ -178,11 +205,15 @@ class AutoPlayerService {
         path: "/signal",
         summary: "Schedule an ExamAware file",
         requireAuth: false,
-        handler: async ({ body }) => {
-          const ea2Path = (body as { ea2Path?: unknown } | undefined)?.ea2Path;
+        handler: async ({ body, headers }) => {
+          if (isBrowserRequest(headers)) {
+            ctx.logger.warn("blocked browser-originated signal request");
+            return { status: 403, body: { error: "browser requests are not allowed" } };
+          }
+          const ea2Path = normalizeEa2Path((body as { ea2Path?: unknown } | undefined)?.ea2Path);
           const futureOnly = (body as { futureOnly?: unknown } | undefined)?.futureOnly === true;
-          if (typeof ea2Path !== "string" || !ea2Path.trim()) {
-            return { status: 400, body: { error: "missing ea2Path" } };
+          if (!ea2Path) {
+            return { status: 400, body: { error: "ea2Path must be an absolute .ea2 file" } };
           }
           this.lastSignalTime = new Date().toISOString();
           this.lastEa2Path = ea2Path;
@@ -214,7 +245,10 @@ class AutoPlayerService {
         path: "/stop",
         summary: "Stop the current session and clear the schedule",
         requireAuth: false,
-        handler: async () => {
+        handler: async ({ headers }) => {
+          if (isBrowserRequest(headers)) {
+            return { status: 403, body: { error: "browser requests are not allowed" } };
+          }
           this.pendingEa2Path = null;
           await this.stopCurrentSession();
           this.clearSchedule();
@@ -452,23 +486,29 @@ class AutoPlayerService {
    * 自己的重启互相打架，还会让 EA 设置页报「端口被占用」。改成「EA 如实上报 + CI 自动跟随」
    * 之后，端口怎么飘都不会推错地方。
    */
-  private async publishEndpoint(): Promise<void> {
+  private async publishEndpoint(force = false): Promise<void> {
     const { ctx } = this;
     if (!this.settings.publishEndpoint) return;
     try {
       const baseUrl = await ctx.api.http.baseUrl();
       const port = parsePort(baseUrl);
       if (!port) return;
+      const changed = port !== this.publishedPort;
+      // 端口没变就别反复重写同一个文件：ClassIsland 只要求 10 分钟内有更新，1 分钟一次足够
+      if (!changed && !force && Date.now() - this.lastEndpointWriteAt < 60_000) return;
       const payload = {
         plugin: "examaware-auto-player",
         port,
         baseUrl,
         path: ROUTE_PREFIX,
+        watermark: WATERMARK,
         updatedAt: new Date().toISOString()
       };
       const file = endpointFilePath();
+      await mkdir(dirname(file), { recursive: true });
       await writeFile(file, JSON.stringify(payload, null, 2), "utf8");
-      if (this.publishedPort !== port) {
+      this.lastEndpointWriteAt = Date.now();
+      if (changed) {
         this.publishedPort = port;
         ctx.logger.info("published http api endpoint", { port, file });
       }
@@ -478,32 +518,20 @@ class AutoPlayerService {
     }
   }
 
-  /**
-   * 可选：把端口写回宿主配置（只在下次启动生效，且宿主之后可能自己再改，默认关闭）。
-   * 想试「固定端口」的用户可以打开它；正常使用建议依赖上面的端口上报。
-   */
-  private async syncFixedPortConfig(): Promise<void> {
-    const { ctx } = this;
-    if (!this.settings.fixedPortEnabled) return;
-    const want = this.settings.fixedPort;
-    try {
-      const all = (await ctx.api.appSettings.all()) as { httpApi?: { port?: number } };
-      const configured = Number(all?.httpApi?.port) || 0;
-      if (configured === want) return;
-      await ctx.api.appSettings.set("httpApi.port", want);
-      ctx.logger.info("wrote fixed port into host config (next launch)", { from: configured, to: want });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      ctx.logger.warn("write fixed port failed", { want, message });
-    }
-  }
-
   private async statusSnapshot(): Promise<Record<string, unknown>> {
-    const session = this.currentSession ? await this.currentSession.snapshot() : undefined;
+    // 关闭 / 析构过程中 snapshot() 可能抛，别让 /ping 整个 500——设置页会误报离线
+    let session: unknown;
+    try {
+      session = this.currentSession ? await this.currentSession.snapshot() : undefined;
+    } catch (error) {
+      this.ctx.logger.warn("session snapshot failed", error);
+      session = undefined;
+    }
     return {
       ok: true,
       build: BUILD,
       apiVersion: 2,
+      watermark: WATERMARK,
       enabled: this.settings.enabled,
       state: this.state,
       nextOpenAt: this.nextOpenAt,
@@ -520,7 +548,13 @@ class AutoPlayerService {
   }
 
   private addTimer(callback: () => void, delay: number): void {
-    this.timers.push(setTimeout(callback, Math.max(0, delay)));
+    let handle: ReturnType<typeof setTimeout>;
+    handle = setTimeout(() => {
+      // 触发过的句柄要摘掉，否则一个下午下来 timers 里全是死引用
+      this.timers = this.timers.filter((timer) => timer !== handle);
+      callback();
+    }, Math.max(0, delay));
+    this.timers.push(handle);
   }
 
   private clearSchedule(): void {

@@ -1,7 +1,11 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (c) 2026 α-氯氰菊酯 <https://github.com/1duye>
+// Watermark: 1duye/examaware-auto-player#WM-2026​​‌‌​​​‌​‌‌​​‌​​​‌‌‌​‌​‌​‌‌‌‌​​‌​‌‌​​‌​‌​‌‌‌‌‌​​​‌‌​​‌​‌​‌‌‌‌​​​​‌‌​​​​‌​‌‌​‌‌​‌​‌‌​​​​‌​‌‌‌​‌‌‌​‌‌​​​​‌​‌‌‌​​‌​​‌‌​​‌​‌​​‌​‌‌​‌​‌‌​​​​‌​‌‌‌​‌​‌​‌‌‌​‌​​​‌‌​‌‌‌‌​​‌​‌‌​‌​‌‌‌​​​​​‌‌​‌‌​​​‌‌​​​​‌​‌‌‌‌​​‌​‌‌​​‌​‌​‌‌‌​​‌​​‌‌‌‌‌​​​​‌‌​​‌​​​‌‌​​​​​​‌‌​​‌​​​‌‌​‌‌​
 import { defineComponent, h } from "vue";
 import { defineRendererPlugin } from "@dsz-examaware/plugin-sdk";
+import { WATERMARK } from "../shared/watermark";
 
-const RENDERER_BUILD = "20261015_ui2";
+const RENDERER_BUILD = "20261102_ui3";
 const SETTINGS_PAGE_ID = "auto-player";
 
 const unwrapApiResponse = (payload: any) =>
@@ -124,6 +128,7 @@ export default defineRendererPlugin<Record<string, unknown>>({
           appliedExitDelaySeconds: initial.exitDelaySeconds ?? 30,
           publishEndpoint: initial.publishEndpoint !== false,
           currentPort: 0,
+          watermark: WATERMARK,
           status: "正在连接",
           countdown: "暂无排程",
           serviceUrl: "",
@@ -203,7 +208,10 @@ export default defineRendererPlugin<Record<string, unknown>>({
           setText("[data-auto-player-current-port]", state.currentPort ? String(state.currentPort) : "—");
 
           const portSwitch = root.querySelector("[data-auto-player-port-switch]");
-          if (portSwitch) portSwitch.classList.toggle("on", state.publishEndpoint);
+          if (portSwitch) {
+            portSwitch.classList.toggle("on", state.publishEndpoint);
+            portSwitch.setAttribute("aria-checked", String(state.publishEndpoint));
+          }
 
           const taskSection = root.querySelector("[data-auto-player-task-section]");
           if (taskSection) (taskSection as HTMLElement).style.display = state.hasTask ? "" : "none";
@@ -225,11 +233,16 @@ export default defineRendererPlugin<Record<string, unknown>>({
               state.lastSignal || state.lastError ? "none" : "";
           }
 
+          setText("[data-auto-player-watermark]", state.watermark || "—");
+
           setText("[data-auto-player-applied]",
             `生效配置：${state.appliedEnabled ? "自动放映已开启" : "自动放映已暂停"} · 提前 ${state.appliedAdvanceMinutes} 分钟 · 延迟 ${state.appliedExitDelaySeconds} 秒`);
 
           const sw = root.querySelector("[data-auto-player-switch]");
-          if (sw) sw.classList.toggle("on", state.enabled);
+          if (sw) {
+            sw.classList.toggle("on", state.enabled);
+            sw.setAttribute("aria-checked", String(state.enabled));
+          }
 
           const notice = root.querySelector("[data-auto-player-notice]");
           if (notice) {
@@ -295,6 +308,7 @@ export default defineRendererPlugin<Record<string, unknown>>({
               state.taskMeta = `科目 ${task.subject || "—"} · 共 ${task.examCount ?? 1} 场 · 放映 ${formatClock(task.openAt)}–${formatClock(task.closeAt)}`;
             }
 
+            state.watermark = payload?.watermark || WATERMARK;
             state.lastSignal = payload?.lastEa2Path
               ? `${payload.lastSignalResult || "received"} · ${formatClock(Date.parse(payload.lastSignalTime))} · ${payload.lastEa2Path}`
               : "";
@@ -330,6 +344,8 @@ export default defineRendererPlugin<Record<string, unknown>>({
             const url = await baseUrl();
             await ctx.api.network.request(`${url}/api/v1/${ctx.plugin.name}/stop`, {
               method: "POST",
+              // 打上「自家设置页」标记：EA 端据此放行，否则它会把带 Origin 的浏览器请求挡掉
+              headers: { "x-auto-player-client": "ui" },
               allowLocalNetwork: true,
               timeoutMs: 4000
             });
@@ -356,12 +372,20 @@ export default defineRendererPlugin<Record<string, unknown>>({
           }
         };
 
+        const onVisibilityChange = () => {
+          if (!document.hidden) void load();
+        };
+        document.addEventListener("visibilitychange", onVisibilityChange);
         void load();
-        pollTimer = setInterval(() => void load(), 1000);
+        // 设置页只是开着的标签页之一，隐藏时不必每秒发请求；2 秒一次已经够实时
+        pollTimer = setInterval(() => {
+          if (!document.hidden) void load();
+        }, 2000);
         ctx.scope.add({
           dispose: () => {
             clearInterval(pollTimer);
             clearTimeout(noticeTimer);
+            document.removeEventListener("visibilitychange", onVisibilityChange);
           }
         });
 
@@ -388,11 +412,11 @@ export default defineRendererPlugin<Record<string, unknown>>({
             h("div", { class: "ap2-kpis ap2-in d2" }, [
               h("div", { class: "ap2-kpi" }, [
                 h("div", { class: "ap2-kpi-label" }, "放映状态"),
-                h("div", { "data-auto-player-status": "", class: "ap2-status" }, state.status)
+                h("div", { "data-auto-player-status": "", class: "ap2-status", role: "status", "aria-live": "polite" }, state.status)
               ]),
               h("div", { class: "ap2-kpi" }, [
                 h("div", { class: "ap2-kpi-label" }, "距下一场"),
-                h("div", { "data-auto-player-countdown": "", class: "ap2-count" }, state.countdown)
+                h("div", { "data-auto-player-countdown": "", class: "ap2-count", role: "status", "aria-live": "polite" }, state.countdown)
               ])
             ]),
 
@@ -425,6 +449,16 @@ export default defineRendererPlugin<Record<string, unknown>>({
                   h("span", {
                     "data-auto-player-switch": "",
                     class: state.enabled ? "ap2-switch on" : "ap2-switch",
+                    role: "switch",
+                    tabindex: 0,
+                    "aria-checked": String(state.enabled),
+                    "aria-label": "自动放映",
+                    onKeydown: (event: KeyboardEvent) => {
+                      if (event.key !== " " && event.key !== "Enter") return;
+                      event.preventDefault();
+                      state.enabled = !state.enabled;
+                      renderState();
+                    },
                     onClick: () => {
                       state.enabled = !state.enabled;
                       renderState();
@@ -490,6 +524,16 @@ export default defineRendererPlugin<Record<string, unknown>>({
                   h("span", {
                     "data-auto-player-port-switch": "",
                     class: state.publishEndpoint ? "ap2-switch on" : "ap2-switch",
+                    role: "switch",
+                    tabindex: 0,
+                    "aria-checked": String(state.publishEndpoint),
+                    "aria-label": "端口自动上报",
+                    onKeydown: (event: KeyboardEvent) => {
+                      if (event.key !== " " && event.key !== "Enter") return;
+                      event.preventDefault();
+                      state.publishEndpoint = !state.publishEndpoint;
+                      renderState();
+                    },
                     onClick: () => {
                       state.publishEndpoint = !state.publishEndpoint;
                       renderState();
@@ -525,6 +569,12 @@ export default defineRendererPlugin<Record<string, unknown>>({
                 h("div", { class: "ap2-item-main" }, [
                   h("div", { class: "ap2-item-title" }, "最近一次错误"),
                   h("div", { "data-auto-player-error": "", class: "ap2-item-desc" }, "")
+                ])
+              ]),
+              h("div", { class: "ap2-item" }, [
+                h("div", { class: "ap2-item-main" }, [
+                  h("div", { class: "ap2-item-title" }, "构建水印"),
+                  h("div", { "data-auto-player-watermark": "", class: "ap2-item-desc ap2-mono" }, "—")
                 ])
               ]),
               h("div", { class: "ap2-item" }, [
