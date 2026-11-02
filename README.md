@@ -115,6 +115,8 @@ push fail: 由于目标计算机积极拒绝，无法连接。 (127.0.0.1:31325)
 - HTTP 路由：`GET /ping`（含 `watermark`）、`POST /signal`（body `{ "ea2Path": "绝对路径.ea2", "futureOnly": false }`）、`POST /stop`。两个 POST 会拒绝浏览器来源的请求，自家设置页需带 `x-auto-player-client: ui`。
 - 图标和版式说明在 `design/` 和 `docs/`。
 - 日志：`%AppData%\@dsz-examaware\desktop\logs\examaware-YYYY-MM-DD.log`。
+- 验收：`pnpm run lint && pnpm test && pnpm run build`。`pnpm test` 跑 `scripts/test-request-guard.mjs`，覆盖浏览器来源拦截与 `.ea2` 路径校验。
+- 开播失败会在考试时间窗内自动重试（最多 2 次，间隔 20s）；读档案偶发失败也会重试 3 次，不会一次读挂就判整场作废。
 
 ## 许可
 

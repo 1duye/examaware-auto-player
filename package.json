@@ -36,7 +36,8 @@
     "build:renderer": "vite build --config vite.config.ts",
     "build:main": "vite build --config vite.main.config.ts",
     "pack": "pnpm run build && pack-examaware-plugin",
-    "lint": "vue-tsc --noEmit"
+    "lint": "vue-tsc --noEmit",
+    "test": "node scripts/test-request-guard.mjs"
   },
   "examaware": {
     "apiVersion": 2,

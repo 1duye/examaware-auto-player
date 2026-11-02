@@ -2,12 +2,13 @@
 // Copyright (c) 2026 α-氯氰菊酯 <https://github.com/1duye>
 // Watermark: 1duye/examaware-auto-player#WM-2026​​‌‌​​​‌​‌‌​​‌​​​‌‌‌​‌​‌​‌‌‌‌​​‌​‌‌​​‌​‌​‌‌‌‌‌​​​‌‌​​‌​‌​‌‌‌‌​​​​‌‌​​​​‌​‌‌​‌‌​‌​‌‌​​​​‌​‌‌‌​‌‌‌​‌‌​​​​‌​‌‌‌​​‌​​‌‌​​‌​‌​​‌​‌‌​‌​‌‌​​​​‌​‌‌‌​‌​‌​‌‌‌​‌​​​‌‌​‌‌‌‌​​‌​‌‌​‌​‌‌‌​​​​​‌‌​‌‌​​​‌‌​​​​‌​‌‌‌‌​​‌​‌‌​​‌​‌​‌‌‌​​‌​​‌‌‌‌‌​​​​‌‌​​‌​​​‌‌​​​​​​‌‌​​‌​​​‌‌​‌‌​
 import { mkdir, writeFile } from "node:fs/promises";
-import { dirname, isAbsolute, join } from "node:path";
+import { dirname, join } from "node:path";
 import { defineMainPlugin } from "@dsz-examaware/plugin-sdk";
 import type { Disposable, MainPluginContext, PlayerSession } from "@dsz-examaware/plugin-sdk";
+import { isBrowserRequest, normalizeEa2Path } from "../shared/request-guard";
 import { WATERMARK } from "../shared/watermark";
 
-const BUILD = "20261102_v2_15";
+const BUILD = "20261103_v2_16";
 
 /**
  * 服务地址命名空间由宿主按插件名拼接。
@@ -17,35 +18,9 @@ const BUILD = "20261102_v2_15";
 const ROUTE_PREFIX = "/api/v1/examaware-auto-player";
 
 /**
- * 本机 HTTP API 没有鉴权，而浏览器发起的跨源请求是「简单请求」时不会先握手：
- * 随便一个网页朝 127.0.0.1:<port> POST 一次，服务端就会真的执行——等于任意网站
- * 都能把教室拉进 kiosk 全屏。浏览器一定带 Origin / Sec-Fetch-Site，原生客户端
- * （ClassIsland 的 HttpClient、自家设置页走宿主网络层并带 x-auto-player-client）
- * 不带，所以按这两个头拒绝即可，不用改协议、不破坏已有对接。
+ * 浏览器来源拦截与 .ea2 路径校验搬到了 src/shared/request-guard.ts：
+ * 那是本插件唯一的安全边界，值得被单测覆盖（scripts/test-request-guard.mjs）。
  */
-type RequestHeaders = Readonly<Record<string, string | string[]>>;
-
-function readHeader(headers: RequestHeaders, name: string): string {
-  const value = headers[name] ?? headers[name.toLowerCase()] ?? headers[name.toUpperCase()];
-  return Array.isArray(value) ? value[0] ?? "" : value ?? "";
-}
-
-function isBrowserRequest(headers: RequestHeaders): boolean {
-  if (readHeader(headers, "x-auto-player-client").trim().toLowerCase() === "ui") return false;
-  if (readHeader(headers, "origin")) return true;
-  const site = readHeader(headers, "sec-fetch-site").trim().toLowerCase();
-  if (site === "cross-site" || site === "same-site") return true;
-  const contentType = readHeader(headers, "content-type").trim().toLowerCase();
-  return Boolean(contentType) && !contentType.startsWith("application/json");
-}
-
-/** 只接受绝对路径的 .ea2 文件，避免把任意路径塞进播放器。 */
-function normalizeEa2Path(raw: unknown): string | null {
-  if (typeof raw !== "string") return null;
-  const value = raw.trim();
-  if (!value || !/\.ea2$/i.test(value) || !isAbsolute(value)) return null;
-  return value;
-}
 
 export interface AutoPlayerSettings {
   enabled: boolean;
@@ -275,7 +250,7 @@ class AutoPlayerService {
       return { scheduled: true, deferred: true, state: this.state };
     }
 
-    const raw = await ctx.api.files.readText(ea2Path);
+    const raw = await this.readConfigText(ea2Path);
     let validation;
     try {
       validation = ctx.api.exams.validate(JSON.parse(raw.replace(/^\uFEFF/, "")), { overlap: "warning" });
@@ -370,6 +345,25 @@ class AutoPlayerService {
     return { scheduled: true, state: this.state, openAt, closeAt };
   }
 
+  /**
+   * 读 .ea2 档案。ClassIsland 端刚写完文件时偶发读不全 / 被占用，
+   * 重试两次比直接判「档案坏了」更贴近现场。
+   */
+  private async readConfigText(path: string): Promise<string> {
+    let lastError: unknown;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        return await this.ctx.api.files.readText(path);
+      } catch (error) {
+        lastError = error;
+        if (attempt < 2) {
+          await new Promise((resolve) => setTimeout(resolve, 150 * (attempt + 1)));
+        }
+      }
+    }
+    throw lastError;
+  }
+
   private async openTask(): Promise<void> {
     if (!this.currentTask || this.state === "opening" || this.state === "active") return;
     const { ctx } = this;
@@ -378,7 +372,7 @@ class AutoPlayerService {
     this.nextOpenAt = null;
 
     try {
-      const raw = await ctx.api.files.readText(task.ea2Path);
+      const raw = await this.readConfigText(task.ea2Path);
       const validation = ctx.api.exams.validate(JSON.parse(raw.replace(/^\uFEFF/, "")), {
         allowEmptyExamInfos: false,
         overlap: "warning"
@@ -403,6 +397,7 @@ class AutoPlayerService {
 
       this.state = "active";
       this.lastError = null;
+      this.openAttempts = 0;
       ctx.logger.info("player ready", {
         sessionId: session.id,
         examName: snapshot.examName,
@@ -411,8 +406,24 @@ class AutoPlayerService {
         key: task.key
       });
     } catch (error) {
-      this.state = "error";
       this.lastError = error instanceof Error ? error.message : String(error);
+      const stillSameTask = this.currentTask?.key === task.key;
+      const withinWindow = Date.now() < task.closeAt - 5_000;
+      // 开播失败（播放器慢启动、文件句柄还没释放）时先重试两次，
+      // 而不是立刻把这整场判死、只排下一场。
+      if (stillSameTask && withinWindow && this.openAttempts < 2) {
+        this.openAttempts += 1;
+        this.state = "scheduled";
+        ctx.logger.warn("player start failed, retrying", {
+          key: task.key,
+          attempt: this.openAttempts,
+          retryInMs: 20_000,
+          message: this.lastError
+        });
+        this.addTimer(() => void this.openTask(), 20_000);
+        return;
+      }
+      this.state = "error";
       ctx.logger.error("player start failed", { key: task.key, message: this.lastError });
       try {
         await this.scheduleFromFile(task.ea2Path, { futureOnly: true });
@@ -460,6 +471,8 @@ class AutoPlayerService {
    * 重复排程；这里用 in-flight 标志合并重入。
    */
   private finishing = false;
+  /** 本次场次开播已重试次数；成功或重新排程时清零。 */
+  private openAttempts = 0;
 
   private async finishCurrentTask(): Promise<void> {
     if (this.finishing) return;
@@ -563,6 +576,7 @@ class AutoPlayerService {
     this.state = "idle";
     this.nextOpenAt = null;
     this.currentTask = null;
+    this.openAttempts = 0;
   }
 
   private async dispose(): Promise<void> {
