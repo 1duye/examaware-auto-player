@@ -25,7 +25,9 @@ ClassIsland 那边把考试排好，ExamAware 这边到点自己开播，考完�
 ## 安装
 
 1. 确认 ExamAware 桌面端已开启 **设置 → HTTP API**。
-2. 在 **设置 → 插件 → 安装** 里选 `examaware-auto-player-<版本>.ea2x`；也可以解压到插件目录后重启 ExamAware。
+2. 二选一安装：
+   - **插件市场**：设置 → 插件 → 市场，找到「自动放映」直接安装（市场里的版本由 ExamAware 插件源决定，见下）；
+   - **离线安装**：从 [Releases](https://github.com/1duye/examaware-auto-player/releases) 下载 `examaware-auto-player-<版本>.ea2x`，在 设置 → 插件 → 本地安装 里选它；也可以解压到插件目录后重启 ExamAware。
 3. 装好后在「插件」页把它启用，设置里会多出一个 **自动放映** 页。
 
 ## 用起来
@@ -48,6 +50,12 @@ ClassIsland 那边把考试排好，ExamAware 这边到点自己开播，考完�
 | 端口自动上报 | 开 / 关 | 开 | 把当前 HTTP API 端口写到发现文件，ClassIsland 端自动跟随（见下）。 |
 
 设置页还会显示连接状态、倒计时、当前场次、最近一次信号，并提供「连通性自检」和「立即停止放映」。
+
+## 插件源里的版本
+
+市场的「自动放映」条目由 [ExamAware/PluginIndex](https://github.com/ExamAware/PluginIndex) 的 `index/plugins/auto-player.yml` 描述，安装走 npm 包 `examaware-auto-player`。这条链路的版本号只取决于 npm 上发布了什么：**npm 上没有的版本，市场里就装不到**。
+
+所以升级顺序是固定的：先 `npm publish`（0.2.3 起），再让索引里的 `latestVersion` 跟上。仓库里的 `scripts/bump-plugin-index.mjs` 负责第二步——它只改版本号并校验 npm 上确实存在该版本，其余元数据由 PluginIndex 的 CI（`tools/fetch_npm.py`）从 npm 拉取。
 
 ## 关于端口
 
