@@ -5,7 +5,7 @@ import { defineComponent, h } from "vue";
 import { defineRendererPlugin } from "@dsz-examaware/plugin-sdk";
 import { WATERMARK } from "../shared/watermark";
 
-const RENDERER_BUILD = "20261102_ui3";
+const RENDERER_BUILD = "20261115_ui4";
 const SETTINGS_PAGE_ID = "auto-player";
 
 const unwrapApiResponse = (payload: any) =>
@@ -33,73 +33,76 @@ const formatRange = (start?: number | null, end?: number | null) =>
 
 const STYLE_ID = "ap2-design-styles";
 const STYLE_CSS = [
-  '.ap2-root{color:var(--td-text-color-primary);font-family:system-ui,-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;max-width:760px;padding:4px 2px 28px}',
+  /* B 端设置页：左对齐页头 / 横向指标条 / 0.5px 微边框卡片 / 单一主操作 */
+  '.ap2-root{--ap2-r-card:12px;--ap2-r-control:8px;--ap2-r-chip:6px;color:var(--td-text-color-primary);font-family:system-ui,-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;font-size:14px;line-height:1.6;max-width:880px;padding:2px 0 36px;text-align:left}',
   ".ap2-root *{box-sizing:border-box}",
-  ".ap2-root h2{margin:0 0 6px;font-size:24px;line-height:1.4;font-weight:600;letter-spacing:-.01em;color:var(--td-text-color-primary)}",
-  ".ap2-desc{margin:0 0 14px;color:var(--td-text-color-secondary);font-size:13px;line-height:1.6}",
-  ".ap2-section{display:flex;align-items:center;gap:8px;margin:18px 0 8px;font-size:13px;font-weight:600;color:var(--td-text-color-secondary)}",
-  ".ap2-section::before{content:'';width:3px;height:14px;border-radius:2px;background:var(--td-brand-color)}",
-  ".ap2-card{background:var(--td-bg-color-container);border:1px solid var(--td-border-level-1-color);border-radius:var(--td-radius-large,12px);overflow:hidden;margin-bottom:12px}",
-  ".ap2-item{display:flex;align-items:center;gap:12px;padding:12px 16px}",
-  ".ap2-item+.ap2-item{border-top:1px solid var(--td-border-level-1-color)}",
-  ".ap2-item-main{flex:1;min-width:0}",
-  ".ap2-item-title{font-size:15px;font-weight:600;color:var(--td-text-color-primary)}",
-  ".ap2-item-desc{color:var(--td-text-color-secondary);font-size:12px;margin-top:3px;line-height:1.5}",
-  ".ap2-item-action{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}",
-  ".ap2-pill{display:inline-flex;align-items:center;gap:7px;padding:4px 10px;border-radius:var(--td-radius-round,999px);background:var(--td-bg-color-component);border:1px solid var(--td-border-level-1-color);font-size:12px;color:var(--td-text-color-secondary);white-space:nowrap}",
-  ".ap2-dot{width:8px;height:8px;border-radius:50%;background:var(--td-text-color-placeholder);flex:none}",
-  ".ap2-dot.ok{background:#00a870}",
+  ".ap2-root :focus-visible{outline:2px solid var(--td-brand-color);outline-offset:2px}",
+  '.ap2-header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap;padding:2px 0 16px;border-bottom:0.5px solid var(--td-border-level-1-color)}',
+  ".ap2-header-main{flex:1 1 340px;min-width:0}",
+  ".ap2-title{margin:0 0 6px;font-size:20px;line-height:1.35;font-weight:600;letter-spacing:-.005em;color:var(--td-text-color-primary);text-wrap:balance}",
+  ".ap2-sub{margin:0;max-width:560px;font-size:13px;line-height:1.7;color:var(--td-text-color-secondary);text-wrap:pretty}",
+  ".ap2-header-side{display:flex;align-items:center;gap:10px;flex-wrap:wrap}",
+  '.ap2-pill{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:var(--ap2-r-chip);font-size:12px;font-weight:500;color:var(--td-text-color-secondary);background:var(--td-bg-color-component);border:0.5px solid var(--td-border-level-1-color);white-space:nowrap}',
+  ".ap2-pill.ok{background:rgba(0,168,112,.1);background:color-mix(in srgb,var(--td-success-color,#00a870) 12%,transparent);border-color:rgba(0,168,112,.3);border-color:color-mix(in srgb,var(--td-success-color,#00a870) 32%,transparent);color:var(--td-text-color-primary)}",
+  ".ap2-pill.warn{background:rgba(227,115,24,.1);background:color-mix(in srgb,var(--td-warning-color,#e37318) 12%,transparent);border-color:rgba(227,115,24,.3);border-color:color-mix(in srgb,var(--td-warning-color,#e37318) 32%,transparent);color:var(--td-text-color-primary)}",
+  ".ap2-pill.err{background:rgba(227,77,89,.1);background:color-mix(in srgb,var(--td-error-color,#e34d59) 12%,transparent);border-color:rgba(227,77,89,.3);border-color:color-mix(in srgb,var(--td-error-color,#e34d59) 32%,transparent);color:var(--td-text-color-primary)}",
+  ".ap2-dot{width:6px;height:6px;border-radius:50%;background:var(--td-text-color-placeholder);flex:none}",
+  ".ap2-dot.ok{background:var(--td-success-color,#00a870)}",
   ".ap2-dot.err{background:var(--td-error-color,#e34d59)}",
   ".ap2-dot.warn{background:var(--td-warning-color,#e37318)}",
   ".ap2-dot.pop{animation:ap2-pop .2s cubic-bezier(.2,.8,.2,1)}",
-  "@keyframes ap2-pop{0%{transform:scale(.35)}60%{transform:scale(1.3)}100%{transform:scale(1)}}",
-  ".ap2-status{font-size:22px;font-weight:600;letter-spacing:-.01em;color:var(--td-text-color-primary)}",
-  ".ap2-service{margin-top:4px;font-size:12px;color:var(--td-text-color-placeholder);font-family:ui-monospace,'Cascadia Mono',Consolas,monospace;word-break:break-all}",
-  ".ap2-count{font-family:ui-monospace,'Cascadia Mono',Consolas,monospace;font-size:28px;font-weight:650;letter-spacing:-.01em;color:var(--td-brand-color);font-variant-numeric:tabular-nums}",
-  ".ap2-mono{font-family:ui-monospace,'Cascadia Mono',Consolas,monospace;word-break:break-all}",
-  ".ap2-flash{animation:ap2-flash .18s cubic-bezier(.2,.8,.2,1)}",
-  "@keyframes ap2-flash{from{opacity:.35;transform:translateY(3px)}to{opacity:1;transform:none}}",
-  ".ap2-field-row{display:flex;align-items:center;gap:8px}",
-  ".ap2-input{height:34px;width:96px;padding:0 10px;color:var(--td-text-color-primary);background:var(--td-bg-color-specialcomponent);border:1px solid var(--td-border-level-2-color);border-radius:var(--td-radius-default,6px);font-size:14px;font-variant-numeric:tabular-nums;outline:none;transition:border-color .2s,box-shadow .2s}",
+  '.ap2-service{margin:8px 0 0;font-size:12px;line-height:1.7;color:var(--td-text-color-placeholder);font-family:ui-monospace,"Cascadia Mono",Consolas,monospace;word-break:break-all}',
+  ".ap2-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0 0}",
+  ".ap2-metric{padding:13px 16px;border:0.5px solid var(--td-border-level-1-color);border-radius:var(--ap2-r-card);background:var(--td-bg-color-container);min-width:0}",
+  ".ap2-metric-label{font-size:12px;line-height:1.5;color:var(--td-text-color-secondary)}",
+  '.ap2-metric-value{margin-top:4px;font-size:20px;line-height:1.25;font-weight:600;letter-spacing:-.01em;color:var(--td-text-color-primary);font-variant-numeric:tabular-nums;font-family:ui-monospace,"Cascadia Mono",Consolas,monospace;word-break:break-all}',
+  ".ap2-metric-value.accent{color:var(--td-brand-color)}",
+  ".ap2-section{margin:26px 0 10px;font-size:13px;font-weight:600;line-height:1.5;color:var(--td-text-color-secondary);display:flex;align-items:center;gap:8px}",
+  '.ap2-section::before{content:"";width:2px;height:12px;border-radius:1px;background:var(--td-brand-color);flex:none}',
+  ".ap2-card{border:0.5px solid var(--td-border-level-1-color);border-radius:var(--ap2-r-card);background:var(--td-bg-color-container);overflow:hidden}",
+  ".ap2-row{display:flex;align-items:flex-start;gap:16px;padding:14px 16px}",
+  ".ap2-row+.ap2-row{border-top:0.5px solid var(--td-border-level-1-color)}",
+  ".ap2-row-main{flex:1 1 auto;min-width:0}",
+  ".ap2-row-title{font-size:14px;font-weight:500;line-height:1.5;color:var(--td-text-color-primary)}",
+  ".ap2-row-desc{margin-top:3px;font-size:12px;line-height:1.6;color:var(--td-text-color-secondary);text-wrap:pretty}",
+  ".ap2-row-action{display:flex;align-items:center;gap:8px;flex:none;flex-wrap:wrap;justify-content:flex-end;padding-top:1px}",
+  '.ap2-mono{font-family:ui-monospace,"Cascadia Mono",Consolas,monospace;word-break:break-all;font-variant-numeric:tabular-nums}',
+  ".ap2-field{display:flex;align-items:center;gap:8px}",
+  ".ap2-input{height:32px;width:88px;padding:0 10px;color:var(--td-text-color-primary);background:var(--td-bg-color-specialcomponent);border:0.5px solid var(--td-border-level-2-color);border-radius:var(--ap2-r-control);font-size:14px;line-height:1.4;font-variant-numeric:tabular-nums;outline:none;transition:border-color .15s ease,background .15s ease}",
+  ".ap2-input:hover{border-color:var(--td-brand-color)}",
   ".ap2-input:focus{border-color:var(--td-brand-color);box-shadow:0 0 0 2px var(--td-brand-color-focus)}",
-  ".ap2-unit{font-size:12px;color:var(--td-text-color-secondary);min-width:24px}",
-  ".ap2-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:34px;padding:0 14px;border:1px solid var(--td-border-level-2-color);border-radius:var(--td-radius-default,6px);background:var(--td-bg-color-component);color:var(--td-text-color-primary);font-size:13.5px;font-weight:500;cursor:pointer;transition:transform .12s cubic-bezier(.2,.8,.2,1),filter .18s ease}",
-  ".ap2-btn:active{transform:scale(.97)}",
+  ".ap2-unit{font-size:12px;line-height:1.5;color:var(--td-text-color-secondary);min-width:24px}",
+  ".ap2-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;padding:0 14px;border:0.5px solid var(--td-border-level-2-color);border-radius:var(--ap2-r-control);background:var(--td-bg-color-container);color:var(--td-text-color-primary);font-size:13px;font-weight:500;line-height:1.2;cursor:pointer;transition:background .15s ease,border-color .15s ease,transform .12s cubic-bezier(.2,.8,.2,1);white-space:nowrap}",
+  ".ap2-btn:active{transform:scale(.98)}",
   ".ap2-btn:disabled{opacity:.5;cursor:not-allowed}",
-  "@media (hover:hover) and (pointer:fine){.ap2-btn:hover{filter:brightness(1.08)}}",
+  "@media (hover:hover) and (pointer:fine){.ap2-btn:hover{background:var(--td-bg-color-container-hover,var(--td-bg-color-component))}}",
   ".ap2-btn.primary{background:var(--td-brand-color);border-color:transparent;color:#fff}",
-  ".ap2-btn.danger{color:var(--td-error-color,#e34d59);border-color:var(--td-error-color,#e34d59)}",
-  ".ap2-switch{position:relative;display:inline-flex;align-items:center;width:42px;height:24px;border-radius:999px;background:var(--td-bg-color-component);border:1px solid var(--td-border-level-2-color);cursor:pointer;transition:background .18s ease,border-color .18s ease;flex:none}",
-  ".ap2-switch::after{content:'';position:absolute;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .18s cubic-bezier(.2,.8,.2,1)}",
+  "@media (hover:hover) and (pointer:fine){.ap2-btn.primary:hover{background:var(--td-brand-color);filter:brightness(1.06)}}",
+  ".ap2-btn.ghost{border-color:transparent;background:transparent;color:var(--td-text-color-secondary)}",
+  ".ap2-btn.danger{color:var(--td-error-color,#e34d59);border-color:rgba(227,77,89,.45);border-color:color-mix(in srgb,var(--td-error-color,#e34d59) 45%,transparent);background:transparent}",
+  "@media (hover:hover) and (pointer:fine){.ap2-btn.danger:hover{background:rgba(227,77,89,.08);background:color-mix(in srgb,var(--td-error-color,#e34d59) 10%,transparent)}}",
+  ".ap2-switch{position:relative;display:inline-flex;align-items:center;width:40px;height:22px;border-radius:999px;background:var(--td-bg-color-component);border:0.5px solid var(--td-border-level-2-color);cursor:pointer;transition:background .18s ease,border-color .18s ease;flex:none}",
+  '.ap2-switch::after{content:"";position:absolute;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2);transition:transform .18s cubic-bezier(.2,.8,.2,1)}',
   ".ap2-switch.on{background:var(--td-brand-color);border-color:transparent}",
   ".ap2-switch.on::after{transform:translateX(18px)}",
-  ".ap2-warn{margin:0 0 12px;padding:10px 14px;border-radius:var(--td-radius-default,6px);background:var(--td-warning-color-1,rgba(227,115,24,.12));border:1px solid var(--td-warning-color-3,rgba(227,115,24,.35));color:var(--td-warning-color-8,#8f4a0d);font-size:12.5px;line-height:1.6}",
-  ".ap2-in{opacity:0;transform:translateY(6px);animation:ap2-in .16s cubic-bezier(.2,.8,.2,1) forwards}",
-  ".ap2-in.d2{animation-delay:.05s}",
-  ".ap2-in.d3{animation-delay:.1s}",
-  "@keyframes ap2-in{to{opacity:1;transform:none}}",
-  ".ap2-toast{position:fixed;right:28px;top:28px;max-width:320px;padding:10px 16px;border-radius:var(--td-radius-default,6px);color:#fff;font-size:13px;font-weight:500;opacity:0;transform:translateY(-8px);transition:transform .2s cubic-bezier(.2,.8,.2,1),opacity .18s ease;pointer-events:none;z-index:2147483000}",
+  ".ap2-empty{padding:22px 16px;border-radius:var(--ap2-r-card);color:var(--td-text-color-placeholder);font-size:13px;line-height:1.7}",
+  ".ap2-empty strong{display:block;margin-bottom:2px;font-weight:500;color:var(--td-text-color-secondary)}",
+  ".ap2-hint{margin:22px 0 0;font-size:12px;line-height:1.7;color:var(--td-text-color-placeholder);text-wrap:pretty}",
+  '.ap2-hint code{font-family:ui-monospace,"Cascadia Mono",Consolas,monospace;font-size:12px}',
+  '.ap2-toast{position:fixed;right:24px;top:24px;max-width:320px;padding:10px 14px 10px 16px;border-radius:var(--ap2-r-control);background:var(--td-bg-color-container);border:0.5px solid var(--td-border-level-1-color);box-shadow:0 8px 24px rgba(0,0,0,.14);color:var(--td-text-color-primary);font-size:13px;line-height:1.6;opacity:0;transform:translateY(-6px);transition:transform .2s cubic-bezier(.2,.8,.2,1),opacity .18s ease;pointer-events:none;z-index:2147483000}',
+  '.ap2-toast::before{content:"";position:absolute;left:0;top:9px;bottom:9px;width:2px;border-radius:1px;background:var(--td-success-color,#00a870)}',
+  ".ap2-toast.err::before{background:var(--td-error-color,#e34d59)}",
   ".ap2-toast.show{opacity:1;transform:none}",
-  ".ap2-toast.ok{background:var(--td-success-color,#00a870)}",
-  ".ap2-toast.err{background:var(--td-error-color,#e34d59)}",
-  "@media (prefers-reduced-motion:reduce){.ap2-in,.ap2-flash,.ap2-dot.pop{animation:none;opacity:1}.ap2-btn{transition:filter .15s ease}.ap2-toast{transition:opacity .15s ease;transform:none}}"
-,
-  /* ==== v2 布局：居中 hero / 两列 KPI / 空状态 / 居中主操作 ==== */
-  ".ap2-root{max-width:880px;margin:0 auto;padding:26px 22px 44px}",
-  ".ap2-hero{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:6px 0 22px}",
-  ".ap2-root .ap2-hero-title{margin:0;font-size:26px;line-height:1.3;font-weight:650;letter-spacing:-.01em;color:var(--td-text-color-primary)}",
-  ".ap2-hero-sub{margin:0;max-width:520px;font-size:13px;line-height:1.75;color:var(--td-text-color-secondary)}",
-  ".ap2-hero-meta{display:flex;flex-direction:column;align-items:center;gap:7px;min-height:24px}",
-  ".ap2-root .ap2-service{margin-top:0;max-width:520px;font-size:11.5px}",
-  ".ap2-kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0 0 22px}",
-  ".ap2-kpi{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 14px 18px;text-align:center;background:var(--td-bg-color-container);border:1px solid var(--td-border-level-1-color);border-radius:var(--td-radius-large,12px)}",
-  ".ap2-kpi-label{font-size:12px;color:var(--td-text-color-secondary)}",
-  ".ap2-empty{display:flex;flex-direction:column;align-items:center;gap:5px;padding:22px 18px;text-align:center;color:var(--td-text-color-placeholder);font-size:12.5px;line-height:1.7}",
-  ".ap2-empty strong{font-weight:600;color:var(--td-text-color-secondary)}",
-  ".ap2-footer{display:flex;flex-direction:column;align-items:center;gap:10px;margin-top:26px}",
-  ".ap2-footer-hint{max-width:460px;margin:0;text-align:center;font-size:12px;line-height:1.7;color:var(--td-text-color-placeholder)}",
-  ".ap2-btn.lg{height:38px;padding:0 24px;font-size:14px;font-weight:600}",
-  "@media (max-width:640px){.ap2-root{padding:20px 16px 36px}.ap2-kpis{grid-template-columns:1fr}}"].join("\n");
+  ".ap2-in{opacity:0;transform:translateY(6px);animation:ap2-in .18s cubic-bezier(.2,.8,.2,1) forwards}",
+  ".ap2-in.d2{animation-delay:.04s}",
+  ".ap2-in.d3{animation-delay:.08s}",
+  "@keyframes ap2-in{to{opacity:1;transform:none}}",
+  "@keyframes ap2-pop{0%{transform:scale(.4)}60%{transform:scale(1.25)}100%{transform:scale(1)}}",
+  ".ap2-flash{animation:ap2-flash .18s cubic-bezier(.2,.8,.2,1)}",
+  "@keyframes ap2-flash{from{opacity:.4}to{opacity:1}}",
+  "@media (prefers-reduced-motion:reduce){.ap2-in,.ap2-flash,.ap2-dot.pop{animation:none;opacity:1;transform:none}.ap2-btn,.ap2-toast{transition:none}}",
+  "@media (max-width:720px){.ap2-metrics{grid-template-columns:1fr}.ap2-row{flex-wrap:wrap}.ap2-row-action{width:100%;justify-content:flex-start}}"
+].join("\n");
 
 function ensureStyles() {
   if (document.getElementById(STYLE_ID)) return;
@@ -181,6 +184,13 @@ export default defineRendererPlugin<Record<string, unknown>>({
               pillText.textContent = text;
               triggerFlash(pillText);
             }
+          }
+
+          const pill = root.querySelector("[data-auto-player-pill]");
+          if (pill) {
+            pill.classList.toggle("ok", state.connected && !state.lastError);
+            pill.classList.toggle("warn", state.connected && Boolean(state.lastError));
+            pill.classList.toggle("err", !state.connected);
           }
 
           const dot = root.querySelector("[data-auto-player-dot]");
@@ -391,61 +401,76 @@ export default defineRendererPlugin<Record<string, unknown>>({
 
         return () =>
           h("section", { "data-auto-player-root": "", class: "ap2-root" }, [
-            // ① hero —— 居中：标题 / 一句说明 / 连接状态。短文本居中＝视觉锚点
-            h("div", { class: "ap2-hero ap2-in" }, [
-              h("h2", { class: "ap2-hero-title" }, "自动放映"),
-              h(
-                "p",
-                { class: "ap2-hero-sub" },
-                "接收 ClassIsland 推送的考试安排，考前自动进入全屏放映，考完自动退出。"
-              ),
-              h("div", { class: "ap2-hero-meta" }, [
-                h("span", { class: "ap2-pill" }, [
+            /* ① 页头：左对齐标题与说明，右侧状态徽标 + 全页唯一主操作 */
+            h("header", { class: "ap2-header ap2-in" }, [
+              h("div", { class: "ap2-header-main" }, [
+                h("h2", { class: "ap2-title" }, "自动放映"),
+                h(
+                  "p",
+                  { class: "ap2-sub" },
+                  "接收 ClassIsland 推送的考试安排，考前自动进入全屏放映，考完自动退出。"
+                )
+              ]),
+              h("div", { class: "ap2-header-side" }, [
+                h("span", { "data-auto-player-pill": "", class: "ap2-pill" }, [
                   h("span", { "data-auto-player-dot": "", class: "ap2-dot err" }),
                   h("span", { "data-auto-player-pill-text": "" }, "服务离线")
                 ]),
-                h("div", { "data-auto-player-service-url": "", class: "ap2-service", style: "display:none" }, "")
+                h("button", { type: "button", class: "ap2-btn primary", onClick: save }, "保存设置")
               ])
             ]),
+            h("div", { "data-auto-player-service-url": "", class: "ap2-service", style: "display:none" }, ""),
 
-            // ② 数据卡 —— 两列、数值居中
-            h("div", { class: "ap2-kpis ap2-in d2" }, [
-              h("div", { class: "ap2-kpi" }, [
-                h("div", { class: "ap2-kpi-label" }, "放映状态"),
-                h("div", { "data-auto-player-status": "", class: "ap2-status", role: "status", "aria-live": "polite" }, state.status)
+            /* ② 指标条：三段等宽，全部左对齐，数字锁等宽防抖 */
+            h("div", { class: "ap2-metrics ap2-in d2" }, [
+              h("div", { class: "ap2-metric" }, [
+                h("div", { class: "ap2-metric-label" }, "放映状态"),
+                h(
+                  "div",
+                  { "data-auto-player-status": "", class: "ap2-metric-value", role: "status", "aria-live": "polite" },
+                  state.status
+                )
               ]),
-              h("div", { class: "ap2-kpi" }, [
-                h("div", { class: "ap2-kpi-label" }, "距下一场"),
-                h("div", { "data-auto-player-countdown": "", class: "ap2-count", role: "status", "aria-live": "polite" }, state.countdown)
+              h("div", { class: "ap2-metric" }, [
+                h("div", { class: "ap2-metric-label" }, "距下一场"),
+                h(
+                  "div",
+                  { "data-auto-player-countdown": "", class: "ap2-metric-value accent", role: "status", "aria-live": "polite" },
+                  state.countdown
+                )
+              ]),
+              h("div", { class: "ap2-metric" }, [
+                h("div", { class: "ap2-metric-label" }, "EA 当前端口"),
+                h("div", { "data-auto-player-current-port": "", class: "ap2-metric-value" }, "—")
               ])
             ]),
 
-            // ③ 当前场次 —— 有场次才整段出现（标题靠左、卡内左对齐、操作靠右）
+            /* ③ 当前场次：有场次才出现，破坏性操作只用描边不填色 */
             h("div", { "data-auto-player-task-section": "", style: "display:none" }, [
               h("div", { class: "ap2-section" }, "当前场次"),
-              h("div", { "data-auto-player-task-card": "", class: "ap2-card" }, [
-                h("div", { class: "ap2-item" }, [
-                  h("div", { class: "ap2-item-main" }, [
-                    h("div", { "data-auto-player-task-title": "", class: "ap2-item-title" }, ""),
-                    h("div", { "data-auto-player-task-range": "", class: "ap2-item-desc" }, ""),
-                    h("div", { "data-auto-player-task-meta": "", class: "ap2-item-desc" }, "")
+              h("div", { class: "ap2-card" }, [
+                h("div", { class: "ap2-row" }, [
+                  h("div", { class: "ap2-row-main" }, [
+                    h("div", { "data-auto-player-task-title": "", class: "ap2-row-title" }, ""),
+                    h("div", { "data-auto-player-task-range": "", class: "ap2-row-desc ap2-mono" }, ""),
+                    h("div", { "data-auto-player-task-meta": "", class: "ap2-row-desc" }, "")
                   ]),
-                  h("div", { class: "ap2-item-action" }, [
+                  h("div", { class: "ap2-row-action" }, [
                     h("button", { type: "button", class: "ap2-btn danger", onClick: stopNow }, "立即停止放映")
                   ])
                 ])
               ])
             ]),
 
-            // ④ 放映设置 —— 标签靠左、控件靠右
+            /* ④ 放映设置 */
             h("div", { class: "ap2-section" }, "放映设置"),
             h("div", { class: "ap2-card ap2-in d2" }, [
-              h("div", { class: "ap2-item" }, [
-                h("div", { class: "ap2-item-main" }, [
-                  h("div", { class: "ap2-item-title" }, "自动放映"),
-                  h("div", { class: "ap2-item-desc" }, "临时暂停自动放映，不影响接收信号")
+              h("div", { class: "ap2-row" }, [
+                h("div", { class: "ap2-row-main" }, [
+                  h("div", { class: "ap2-row-title" }, "自动放映"),
+                  h("div", { class: "ap2-row-desc" }, "临时暂停自动放映，不影响接收信号")
                 ]),
-                h("div", { class: "ap2-item-action" }, [
+                h("div", { class: "ap2-row-action" }, [
                   h("span", {
                     "data-auto-player-switch": "",
                     class: state.enabled ? "ap2-switch on" : "ap2-switch",
@@ -466,13 +491,13 @@ export default defineRendererPlugin<Record<string, unknown>>({
                   })
                 ])
               ]),
-              h("div", { class: "ap2-item" }, [
-                h("div", { class: "ap2-item-main" }, [
-                  h("div", { class: "ap2-item-title" }, "提前启动"),
-                  h("div", { class: "ap2-item-desc" }, "考试开始前多少分钟进入放映")
+              h("div", { class: "ap2-row" }, [
+                h("div", { class: "ap2-row-main" }, [
+                  h("div", { class: "ap2-row-title" }, "提前启动"),
+                  h("div", { class: "ap2-row-desc" }, "考试开始前多少分钟进入放映")
                 ]),
-                h("div", { class: "ap2-item-action" }, [
-                  h("div", { class: "ap2-field-row" }, [
+                h("div", { class: "ap2-row-action" }, [
+                  h("div", { class: "ap2-field" }, [
                     h("input", {
                       "data-auto-player-advance": "",
                       class: "ap2-input",
@@ -480,6 +505,7 @@ export default defineRendererPlugin<Record<string, unknown>>({
                       min: 0,
                       max: 60,
                       value: state.advanceMinutes,
+                      "aria-label": "提前启动分钟数",
                       onInput: (event: Event) => {
                         state.advanceMinutes = Number((event.target as HTMLInputElement).value) || 0;
                       }
@@ -488,13 +514,13 @@ export default defineRendererPlugin<Record<string, unknown>>({
                   ])
                 ])
               ]),
-              h("div", { class: "ap2-item" }, [
-                h("div", { class: "ap2-item-main" }, [
-                  h("div", { class: "ap2-item-title" }, "延迟退出"),
-                  h("div", { class: "ap2-item-desc" }, "考试结束后延迟多少秒退出")
+              h("div", { class: "ap2-row" }, [
+                h("div", { class: "ap2-row-main" }, [
+                  h("div", { class: "ap2-row-title" }, "延迟退出"),
+                  h("div", { class: "ap2-row-desc" }, "考试结束后延迟多少秒退出")
                 ]),
-                h("div", { class: "ap2-item-action" }, [
-                  h("div", { class: "ap2-field-row" }, [
+                h("div", { class: "ap2-row-action" }, [
+                  h("div", { class: "ap2-field" }, [
                     h("input", {
                       "data-auto-player-exit-delay": "",
                       class: "ap2-input",
@@ -502,6 +528,7 @@ export default defineRendererPlugin<Record<string, unknown>>({
                       min: 0,
                       max: 300,
                       value: state.exitDelaySeconds,
+                      "aria-label": "延迟退出秒数",
                       onInput: (event: Event) => {
                         state.exitDelaySeconds = Number((event.target as HTMLInputElement).value) || 0;
                       }
@@ -512,15 +539,19 @@ export default defineRendererPlugin<Record<string, unknown>>({
               ])
             ]),
 
-            // ④-2 服务端口 —— EA 上报当前端口，ClassIsland 端自动跟随
+            /* ⑤ 服务端口：宿主端口会飘，这里只说怎么跟上，端口数值已上移到指标条 */
             h("div", { class: "ap2-section" }, "服务端口"),
             h("div", { class: "ap2-card ap2-in d2" }, [
-              h("div", { class: "ap2-item" }, [
-                h("div", { class: "ap2-item-main" }, [
-                  h("div", { class: "ap2-item-title" }, "端口自动上报"),
-                  h("div", { class: "ap2-item-desc" }, "把 EA 当前 HTTP API 端口写到 auto-player-endpoint.json；ClassIsland 端打开「自动发现端口」后会自动跟随，两边不用再手工对齐。")
+              h("div", { class: "ap2-row" }, [
+                h("div", { class: "ap2-row-main" }, [
+                  h("div", { class: "ap2-row-title" }, "端口自动上报"),
+                  h(
+                    "div",
+                    { class: "ap2-row-desc" },
+                    "把 EA 当前 HTTP API 端口写到 auto-player-endpoint.json；ClassIsland 端打开「自动发现端口」后自动跟随，两边不用再手工对齐。"
+                  )
                 ]),
-                h("div", { class: "ap2-item-action" }, [
+                h("div", { class: "ap2-row-action" }, [
                   h("span", {
                     "data-auto-player-port-switch": "",
                     class: state.publishEndpoint ? "ap2-switch on" : "ap2-switch",
@@ -540,66 +571,56 @@ export default defineRendererPlugin<Record<string, unknown>>({
                     }
                   })
                 ])
-              ]),
-              h("div", { class: "ap2-item" }, [
-                h("div", { class: "ap2-item-main" }, [
-                  h("div", { class: "ap2-item-title" }, "EA 当前端口"),
-                  h("div", { class: "ap2-item-desc" }, "宿主自己报的监听端口；EA 重启后可能变化，ClassIsland 会自动跟上")
-                ]),
-                h("div", { class: "ap2-item-action" }, [
-                  h("span", { "data-auto-player-current-port": "", class: "ap2-mono" }, "—")
-                ])
               ])
             ]),
 
-            // ⑤ 记录与诊断 —— 空状态居中；有数据时逐行左对齐
+            /* ⑥ 记录与诊断：空态左对齐；有数据时逐行展开 */
             h("div", { class: "ap2-section" }, "记录与诊断"),
             h("div", { class: "ap2-card ap2-in d3" }, [
               h("div", { "data-auto-player-empty": "", class: "ap2-empty" }, [
                 h("strong", null, "还没有收到 ClassIsland 的信号"),
                 h("span", null, "打开 ClassIsland、并把当天要考的科目标记为「考试科目」后，这里会出现最近一次推送记录。")
               ]),
-              h("div", { "data-auto-player-signal-row": "", class: "ap2-item", style: "display:none" }, [
-                h("div", { class: "ap2-item-main" }, [
-                  h("div", { class: "ap2-item-title" }, "最近一次信号"),
-                  h("div", { "data-auto-player-signal": "", class: "ap2-item-desc ap2-mono" }, "")
+              h("div", { "data-auto-player-signal-row": "", class: "ap2-row", style: "display:none" }, [
+                h("div", { class: "ap2-row-main" }, [
+                  h("div", { class: "ap2-row-title" }, "最近一次信号"),
+                  h("div", { "data-auto-player-signal": "", class: "ap2-row-desc ap2-mono" }, "")
                 ])
               ]),
-              h("div", { "data-auto-player-error-row": "", class: "ap2-item", style: "display:none" }, [
-                h("div", { class: "ap2-item-main" }, [
-                  h("div", { class: "ap2-item-title" }, "最近一次错误"),
-                  h("div", { "data-auto-player-error": "", class: "ap2-item-desc" }, "")
+              h("div", { "data-auto-player-error-row": "", class: "ap2-row", style: "display:none" }, [
+                h("div", { class: "ap2-row-main" }, [
+                  h("div", { class: "ap2-row-title" }, "最近一次错误"),
+                  h("div", { "data-auto-player-error": "", class: "ap2-row-desc" }, "")
                 ])
               ]),
-              h("div", { class: "ap2-item" }, [
-                h("div", { class: "ap2-item-main" }, [
-                  h("div", { class: "ap2-item-title" }, "构建水印"),
-                  h("div", { "data-auto-player-watermark": "", class: "ap2-item-desc ap2-mono" }, "—")
+              h("div", { class: "ap2-row" }, [
+                h("div", { class: "ap2-row-main" }, [
+                  h("div", { class: "ap2-row-title" }, "构建水印"),
+                  h("div", { "data-auto-player-watermark": "", class: "ap2-row-desc ap2-mono" }, "—")
                 ])
               ]),
-              h("div", { class: "ap2-item" }, [
-                h("div", { class: "ap2-item-main" }, [
-                  h("span", { "data-auto-player-applied": "", class: "ap2-item-desc" }, "")
+              h("div", { class: "ap2-row" }, [
+                h("div", { class: "ap2-row-main" }, [
+                  h("div", { class: "ap2-row-title" }, "生效配置"),
+                  h("div", { "data-auto-player-applied": "", class: "ap2-row-desc" }, "")
                 ]),
-                h("div", { class: "ap2-item-action" }, [
+                h("div", { class: "ap2-row-action" }, [
                   h("button", { type: "button", class: "ap2-btn", onClick: selfTest }, "连通性自检")
                 ])
               ])
             ]),
 
-            // ⑥ 底部 —— 主操作居中收束
-            h("div", { class: "ap2-footer" }, [
-              h("button", { type: "button", class: "ap2-btn primary lg", onClick: save }, "保存设置"),
-              h(
-                "p",
-                { class: "ap2-footer-hint" },
-                "改动保存后立即生效。配合 ClassIsland 插件「ExamAware2联系人」使用：由它生成当日考试档案并推送信号。"
-              )
-            ]),
+            /* ⑦ 页脚只放说明，主操作已在页头 */
+            h(
+              "p",
+              { class: "ap2-hint" },
+              "改动保存后立即生效。配合 ClassIsland 插件「ExamAware2联系人」使用：由它生成当日考试档案并推送信号。"
+            ),
             h("div", { "data-auto-player-notice": "", class: "ap2-toast" }, state.notice)
           ]);
       }
     });
+
 
     ctx.scope.add(
       await ctx.api.ui.settings.registerPage({
