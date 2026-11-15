@@ -36,6 +36,8 @@ const localPkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.
 const version = option("--version", localPkg.version);
 const repo = resolve(option("--repo", join(process.cwd(), "..", "PluginIndex")));
 const branch = option("--branch", `chore/auto-player-${version}`);
+// fork 的仓库名可能被 GitHub 加了后缀（如 PluginIndex-1），PR 的 head 要带所有者
+const forkOwner = option("--fork-owner", "1duye");
 
 const fail = (code, message) => {
   console.error(`✗ ${message}`);
@@ -102,7 +104,12 @@ const main = async () => {
   }
 
   const git = (...args) => execFileSync("git", args, { cwd: repo, stdio: "inherit" });
-  git("checkout", "-b", branch);
+  // 分支可能已经建好（重跑本脚本时），能切就切，别再 -b 报错
+  try {
+    git("checkout", "-b", branch);
+  } catch {
+    git("checkout", branch);
+  }
   git("add", ENTRY);
   git("commit", "-m", `chore(auto-player): bump to ${version}`);
   git("push", "-u", "origin", branch);
@@ -116,7 +123,7 @@ const main = async () => {
       "--base",
       "main",
       "--head",
-      branch,
+      `${forkOwner}:${branch}`,
       "--title",
       `chore(auto-player): bump to ${version}`,
       "--body",
